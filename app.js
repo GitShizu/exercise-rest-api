@@ -19,7 +19,7 @@ const writeResources = (resourceType, newResource) => {
 
 const generateId = (resourceType) => {
     const resource = readResources(resourceType);
-    const Ids = resource.map(elm => elm.id);
+    const Ids = resource.map(elm => Number(elm.id));
     for (let i = 0; i <= Ids.length; i++) {
         if (!Ids.includes(i)) {
             return i;
@@ -117,10 +117,13 @@ const listenResource = (resourceType, resourceProps) => {
             res.status(400).send(`Up to ${resourceProps.length +1} properties can be edited. To edit all properties use the replace method.`)
             return;
         }
+        if(Object.keys(newProps).includes('id')){
+            res.status(400).send('the "id" property is read-only')
+        }
         const resourceList = readResources(resourceType);
         const indexToUpdate = checkSingleResource(resourceType, req, res)[1];
         const newResource = { ...resourceList[indexToUpdate], ...newProps }
-        let isNewPropsValid = Object.keys(newProps).length <= 4;
+        let isNewPropsValid = true;
         resourceProps.forEach((prop) => {
             isNewPropsValid &= Object.keys(newResource).includes(prop);
         })
