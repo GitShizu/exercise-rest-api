@@ -33,7 +33,7 @@ const checkSingleResource = (resourceType, req, res) => {
     let referenceIndex;
     for (let i = 0; i < resourceList.length; i++) {
         const resource = resourceList[i];
-        if (resource.id === Number(id)) {
+        if (Number(resource.id) === Number(id)) {
             referenceIndex = i;
             break;
         }
@@ -120,6 +120,10 @@ app.put('/musicians/:id', (req, res) => {
 app.patch('/musicians/:id', (req, res) => {
     const resourceProps = ["name", "last_name", "occupation"]
     const newProps = req.body;
+    if(Object.keys(newProps).length > 4){
+        res.status(400).send('Up to 4 properties can be edited. To replace all properties use the replace method.')
+        return;
+    }
     const resourceList = readResources('musicians');
     const indexToUpdate = checkSingleResource('musicians', req, res)[1];
     const newResource = { ...resourceList[indexToUpdate], ...newProps }
@@ -131,7 +135,7 @@ app.patch('/musicians/:id', (req, res) => {
         res.status(400).send(`musicians must include ${resourceProps}. Up to 2 additional properties can be included (max. 5 total)`)
         return;
     };
-    resourceList[indexToUpdate] = { ...resourceList[indexToUpdate], ...newProps };
+    resourceList[indexToUpdate] = { ...resourceList[indexToUpdate], ...newResource };
     writeResources('musicians', resourceList)
     res.send(resourceList);
 })
