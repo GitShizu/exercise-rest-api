@@ -119,6 +119,7 @@ const listenResource = (resourceType, resourceProps) => {
         }
         if(Object.keys(newProps).includes('id')){
             res.status(400).send('the "id" property is read-only')
+            return;
         }
         const resourceList = readResources(resourceType);
         const indexToUpdate = checkSingleResource(resourceType, req, res)[1];
