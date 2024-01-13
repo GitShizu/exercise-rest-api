@@ -47,13 +47,91 @@ const checkSingleResource = (resourceType, req, res) => {
 
 const isResourceValid = (resourceProps, newResource) => {
     let isValid = true;
-    isValid &= Object.keys(newResource).length >= 3 && Object.keys(newResource).length <= 5;
+    isValid &= Object.keys(newResource).length <= resourceProps.length +2;
     if (isValid) {
         resourceProps.forEach((prop) => {
             isValid &= newResource[prop] !== undefined;
         })
     }
     return isValid;
+}
+const listenResource = (resourceType, resourceProps) => {
+    if (!fs.existsSync(path.resolve(`./database/${resourceType}.json`))) {
+        writeResources(resourceType, []);
+    }
+    //VIEW RESOURCE LIST
+    app.get(`/${resourceType}`, (req, res) => {
+        const resourceList = readResources(resourceType);
+        res.sendFile(path.resolve(`./database/${resourceType}.json`));
+    })
+
+    //ADD NEW RESOURCE
+    app.post(`/${resourceType}`, (req, res) => {
+        const newResource = req.body;
+        const isValid = isResourceValid(resourceProps, newResource);
+        if (!isValid) {
+            res.status(400).send(`${resourceType} must include ${resourceProps}. Up to 2 additional properties can be added (optional)`)
+            return;
+        }
+        const resourceList = readResources(resourceType);
+        newResource.id = generateId(resourceType);
+        resourceList.push(newResource)
+        writeResources(resourceType, resourceList)
+        res.send(resourceList);
+    })
+
+    //VIEW RESOURCE BY ID
+    app.get(`/${resourceType}/:id`, (req, res) => {
+        const resource = checkSingleResource(resourceType, req, res)[0];
+        res.send(resource);
+    })
+
+    //DELETE RESOURCE BY ID
+    app.delete(`/${resourceType}/:id`, (req, res) => {
+        const indexToDelete = checkSingleResource('musicians', req, res)[1];
+        const resourceList = readResources('musicians');
+        resourceList.splice(indexToDelete, 1);
+        writeResources('musicians', resourceList);
+        res.send(resourceList);
+    })
+
+    //REPLACE RESOURCE BY ID
+    app.put(`/${resourceType}/:id`, (req, res) => {
+        const newResource = req.body;
+        const isValid = isResourceValid(resourceProps, newResource);
+        if (!isValid) {
+            res.status(400).send(`${resourceType} must include ${resourceProps}. Up to 2 additional properties can be included (optional)`)
+            return;
+        };
+        const indexToUpdate = checkSingleResource(resourceType, req, res)[1];
+        const resourceList = readResources(resourceType);
+        resourceList[indexToUpdate] = { ...newResource, id: Number(req.params.id) };
+        writeResources(resourceType, resourceList)
+        res.send(resourceList);
+    })
+
+    //EDIT RESOURCE PROPERTIES BY ID
+    app.patch(`/${resourceType}/:id`, (req, res) => {
+        const newProps = req.body;
+        if (Object.keys(newProps).length > resourceProps.length +1) {
+            res.status(400).send(`Up to ${resourceProps.length +1} properties can be edited. To edit all properties use the replace method.`)
+            return;
+        }
+        const resourceList = readResources(resourceType);
+        const indexToUpdate = checkSingleResource(resourceType, req, res)[1];
+        const newResource = { ...resourceList[indexToUpdate], ...newProps }
+        let isNewPropsValid = Object.keys(newProps).length <= 4;
+        resourceProps.forEach((prop) => {
+            isNewPropsValid &= Object.keys(newResource).includes(prop);
+        })
+        if (!isNewPropsValid) {
+            res.status(400).send(`${resourceType} must include ${resourceProps}. Up to 2 additional properties can be included (optional)`)
+            return;
+        };
+        resourceList[indexToUpdate] = { ...resourceList[indexToUpdate], ...newResource };
+        writeResources(resourceType, resourceList)
+        res.send(resourceList);
+    })
 }
 
 app.listen(3000, () => {
@@ -63,79 +141,6 @@ app.listen(3000, () => {
 app.use(express.json());
 app.use(morgan('dev'));
 
-//VIEW RESOURCE LIST
-app.get('/musicians', (req, res) => {
-    const resourceList = readResources('musicians');
-    res.send(resourceList);
-})
+//ENDPOINTS
+listenResource('musicians', ["name", "last_name", "occupation"]);
 
-//ADD NEW RESOURCE
-app.post('/musicians', (req, res) => {
-    const newResource = req.body;
-    const resourceProps = ["name", "last_name", "occupation"]
-    const isValid = isResourceValid(resourceProps, newResource);
-    if (!isValid) {
-        res.status(400).send(`musicians must include ${resourceProps}. Up to 2 additional properties can be added (max. 5 total)`)
-        return;
-    }
-    const resourceList = readResources('musicians');
-    newResource.id = generateId('musicians');
-    resourceList.push(newResource)
-    writeResources('musicians', resourceList)
-    res.send(resourceList);
-})
-
-//VIEW RESOURCE BY ID
-app.get('/musicians/:id', (req, res) => {
-    const resource = checkSingleResource('musicians', req, res)[0];
-    res.send(resource);
-})
-
-//DELETE RESOURCE BY ID
-app.delete('/musicians/:id', (req, res) => {
-    const indexToDelete = checkSingleResource('musicians', req, res)[1];
-    const resourceList = readResources('musicians');
-    resourceList.splice(indexToDelete, 1);
-    writeResources('musicians', resourceList);
-    res.send(resourceList);
-})
-
-//REPLACE RESOURCE BY ID
-app.put('/musicians/:id', (req, res) => {
-    const resourceProps = ["name", "last_name", "occupation"];
-    const newResource = req.body;
-    const isValid = isResourceValid(resourceProps, newResource);
-    if (!isValid) {
-        res.status(400).send(`musicians must include ${resourceProps}. Up to 2 additional properties can be included (max. 5 total)`)
-        return;
-    };
-    const indexToUpdate = checkSingleResource('musicians', req, res)[1];
-    const resourceList = readResources('musicians');
-    resourceList[indexToUpdate] = { ...newResource, id: Number(req.params.id) };
-    writeResources('musicians', resourceList)
-    res.send(resourceList);
-})
-
-//EDIT RESOURCE PROPERTIES BY ID
-app.patch('/musicians/:id', (req, res) => {
-    const resourceProps = ["name", "last_name", "occupation"]
-    const newProps = req.body;
-    if(Object.keys(newProps).length > 4){
-        res.status(400).send('Up to 4 properties can be edited. To replace all properties use the replace method.')
-        return;
-    }
-    const resourceList = readResources('musicians');
-    const indexToUpdate = checkSingleResource('musicians', req, res)[1];
-    const newResource = { ...resourceList[indexToUpdate], ...newProps }
-    let isNewPropsValid = Object.keys(newProps).length <= 4;
-    resourceProps.forEach((prop)=>{
-        isNewPropsValid &= Object.keys(newResource).includes(prop);
-    })
-    if (!isNewPropsValid) {
-        res.status(400).send(`musicians must include ${resourceProps}. Up to 2 additional properties can be included (max. 5 total)`)
-        return;
-    };
-    resourceList[indexToUpdate] = { ...resourceList[indexToUpdate], ...newResource };
-    writeResources('musicians', resourceList)
-    res.send(resourceList);
-})
