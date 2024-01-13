@@ -63,13 +63,13 @@ app.listen(3000, () => {
 app.use(express.json());
 app.use(morgan('dev'));
 
-//READ RESOURCE LIST
+//VIEW RESOURCE LIST
 app.get('/musicians', (req, res) => {
     const resourceList = readResources('musicians');
     res.send(resourceList);
 })
 
-//READ SINGLE RESOURCE
+//VIEW RESOURCE BY ID
 app.get('/musicians/:id', (req, res) => {
     const resource = checkSingleResource('musicians', req, res)[0];
     res.send(resource);
@@ -88,5 +88,14 @@ app.post('/musicians', (req, res) => {
     newResource.id = generateId('musicians');
     resourceList.push(newResource)
     writeResources('musicians', resourceList)
+    res.send(resourceList);
+})
+
+//DELETE RESOURCE BY ID
+app.delete('/musicians/:id', (req,res)=>{
+    const indexToDelete = checkSingleResource('musicians', req,res)[1];
+    const resourceList = readResources('musicians');
+    resourceList.splice(indexToDelete, 1);
+    writeResources('musicians', resourceList);
     res.send(resourceList);
 })
