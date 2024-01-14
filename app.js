@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import express from 'express'
 import morgan from 'morgan'
+import cors from 'cors';
 
 const app = express();
 
@@ -39,7 +40,7 @@ const checkSingleResource = (resourceType, req, res) => {
         }
     }
     if (referenceIndex === undefined) {
-        res.status(404).send(`No ${resourceType} with ID ${id} were found`);
+        res.status(404).send(`No ${resourceType} with ID ${id} found`);
         return [];
     }
     return [resourceList[referenceIndex], referenceIndex];
@@ -88,10 +89,10 @@ const listenResource = (resourceType, resourceProps) => {
 
     //DELETE RESOURCE BY ID
     app.delete(`/${resourceType}/:id`, (req, res) => {
-        const indexToDelete = checkSingleResource('musicians', req, res)[1];
-        const resourceList = readResources('musicians');
+        const indexToDelete = checkSingleResource(resourceType, req, res)[1];
+        const resourceList = readResources(resourceType);
         resourceList.splice(indexToDelete, 1);
-        writeResources('musicians', resourceList);
+        writeResources(resourceType, resourceList);
         res.send(resourceList);
     })
 
@@ -139,12 +140,15 @@ const listenResource = (resourceType, resourceProps) => {
 }
 
 app.listen(3000, () => {
-    console.log('Server running - listening port 3000');
+    console.log('Server running - listening at port 3000');
 })
 
 app.use(express.json());
+app.use(cors({
+    origin:'*'
+}));
 app.use(morgan('dev'));
 
 //ENDPOINTS
-listenResource('musicians', ["name", "last_name", "occupation"]);
-
+listenResource('musicians', ['name', 'last_name', 'occupation']);
+listenResource('music', ['title', 'author', 'year'])
