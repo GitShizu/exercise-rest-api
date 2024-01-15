@@ -31,7 +31,8 @@ app.get('/musicians/', async (req, res) => {
 app.post('/musicians/', async (req, res) => {
     try {
         const musician = await Musician.create(req.body);
-        res.send(musician);
+        const musicians = await Musician.find();
+        res.send(musicians);
     } catch (e) {
         res.status(400).send(e.message)
     }
@@ -53,7 +54,8 @@ app.delete(`/musicians/:id`, async (req, res) => {
     try {
         const { id } = req.params
         await Musician.findByIdAndDelete(id);
-        res.send(`Musician with ID ${id} successfully removed`)
+        const musicians = await Musician.find();
+        res.send(musicians)
     } catch (e) {
         res.status(404).send(e.message);
     }
